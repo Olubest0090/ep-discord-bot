@@ -1,17 +1,20 @@
 import discord
 from discord.ext import commands
-import requests
 import os
 
 # ===== CONFIG =====
+# These channel IDs are already provided by you
+WELCOME_CHANNEL_ID = 1367850216459599965  # Welcome channel
+APPLY_CHANNEL_ID = 1368138036071763968    # Apply channel
+
+# Your Discord User ID (to be mentioned)
+OWNER_ID = 933323420714827777
+
+# Token from Render Environment Variables
 TOKEN = os.getenv("TOKEN")
 
-WELCOME_CHANNEL_ID = 1367850216459599965
-APPLY_CHANNEL_ID = 1368138036071763968
-
-DISCORD_ID = 1426437331291734118
-NATION_ID = 726130
-PNW_API_KEY = "cfe0cf1ff736684026e2"
+if not TOKEN:
+    raise RuntimeError("TOKEN not found. Set it in Render Environment Variables.")
 
 # ===== INTENTS =====
 intents = discord.Intents.default()
@@ -24,78 +27,33 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ===== EVENTS =====
 @bot.event
 async def on_ready():
-    print(f"EP Bot online as {bot.user}")
+    print(f"🜂 Bot online as {bot.user}")
 
 @bot.event
 async def on_member_join(member):
-    try:
-        welcome_channel = bot.get_channel(WELCOME_CHANNEL_ID)
-        apply_channel = bot.get_channel(APPLY_CHANNEL_ID)
-        if welcome_channel and apply_channel:
-            await welcome_channel.send(
-                f"Welcome {member.mention} to **Eternal Phoenix**!\n"
-                f"Open a ticket in {apply_channel.mention}"
-            )
-    except Exception as e:
-        print(f"ERROR sending welcome: {e}")
+    channel = bot.get_channel(WELCOME_CHANNEL_ID)
+    apply_channel = bot.get_channel(APPLY_CHANNEL_ID)
 
-# ===== HELPER FUNCTION =====
-def should_respond(ctx, command_name):
-    """Return True if bot should respond to a command"""
-    message = ctx.message.content.lower()
-    # Slash command or bot mention + !command
-    return (
-        message.startswith(f"/{command_name}") or
-        (bot.user in ctx.message.mentions and message.startswith(f"!{command_name}"))
-    )
+    if channel and apply_channel:
+        await channel.send(
+            f"Welcome {member.mention} to **Eternal Phoenix** 🜂\n"
+            f"Please proceed to {apply_channel.mention} to complete your application."
+        )
+
+@bot.event
+async def on_member_remove(member):
+    channel = bot.get_channel(WELCOME_CHANNEL_ID)
+    owner = bot.get_user(OWNER_ID)
+
+    if channel and owner:
+        await channel.send(
+            f"{owner.mention} — **{member.name}** left the server. Loser detected 🜂"
+        )
 
 # ===== COMMANDS =====
 @bot.command()
 async def ping(ctx):
-    if should_respond(ctx, "ping"):
-        await ctx.send("🜂 Bot is alive.")
-
-@bot.command()
-async def who(ctx, user: discord.User = None):
-    if not should_respond(ctx, "who"):
-        return
-
-    try:
-        if user is None or user.id == DISCORD_ID:
-            nation_id = NATION_ID
-        else:
-            nation_id = NATION_ID  # Placeholder for other users
-
-        query = f"""
-        {{
-          nations(id: {nation_id}) {{
-            nation_name
-            balance
-            population
-            networth
-            land
-            is_vacation
-          }}
-        }}
-        """
-        headers = {"X-Api-Key": PNW_API_KEY}
-        response = requests.post("https://api.politicsandwar.com/graphql", json={"query": query}, headers=headers)
-        data = response.json()
-        nation = data.get("data", {}).get("nations", [{}])[0]
-
-        if nation:
-            await ctx.send(
-                f"📊 Nation Info for {nation.get('nation_name')}:\n"
-                f"💰 Balance: {nation.get('balance')}\n"
-                f"🌍 Land: {nation.get('land')}\n"
-                f"👥 Population: {nation.get('population')}\n"
-                f"🏛️ Networth: {nation.get('networth')}\n"
-                f"🛡 Vacation Mode: {nation.get('is_vacation')}"
-            )
-        else:
-            await ctx.send("❌ Could not fetch nation data.")
-    except Exception as e:
-        await ctx.send(f"❌ Error fetching nation info: {e}")
+    await ctx.send("🜂 Eternal Phoenix systems online.")
 
 # ===== RUN BOT =====
 bot.run(TOKEN)
